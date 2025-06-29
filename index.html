@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #3498db;
+            border-radius: 50%; width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        button:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        #pledge-typing-area {
+            position: relative;
+            cursor: text;
+        }
+        .typing-text-style {
+            font-family: 'Noto Sans KR', sans-serif;
+            font-size: 0.875rem;
+            line-height: 1.625;
+            padding: 1rem;
+            margin: 0;
+            border: none;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #pledge-text-display {
+            position: relative;
+            z-index: 1;
+            color: transparent; 
+            user-select: none;
+            min-height: 110px;
+        }
+        #pledge-text-display span { color: #4a5568; }
+        #pledge-text-display span.correct { color: #16a34a; }
+        #pledge-text-display span.incorrect { color: #dc2626; }
+        #pledge-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+            color: transparent;
+            caret-color: black;
+            resize: none;
+            outline: none;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="app" class="container mx-auto max-w-2xl p-4 sm:p-8 pb-16">
+        <div id="login-view" class="bg-white p-8 rounded-xl shadow-lg">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">AHgorithm!</h1>
+            <p class="text-center text-gray-500 mb-8">Ah! 소리 나오게 쉬운 알고리즘 챌린지</p>
+            <div class="space-y-4">
+                <input type="text" id="username" placeholder="아이디" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="password" placeholder="비밀번호" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="login()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors">로그인</button>
+            </div>
+            <p id="login-error" class="text-red-500 text-center mt-4 h-5"></p>
+            <div class="text-center mt-6">
+                <a href="#" onclick="showSignUpView()" class="text-sm text-blue-600 hover:underline">계정이 없으신가요? 회원가입</a>
+            </div>
+        </div>
+        <div id="signup-view" class="hidden bg-white p-8 rounded-xl shadow-lg">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">회원가입</h1>
+            <p class="text-center text-gray-500 mb-8">새로운 계정을 생성합니다.</p>
+            <div class="space-y-4">
+                <input type="text" id="signup-name" placeholder="이름 (예: 김정인)" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="signup-username" placeholder="사용할 아이디" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="signup-password" placeholder="비밀번호" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="password" id="signup-password-confirm" placeholder="비밀번호 확인" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div id="pledge-section" class="hidden pt-4 space-y-2">
+                    <p class="text-sm font-semibold text-gray-700">아래 서약 내용을 그대로 따라 입력해주세요.</p>
+                    <div id="pledge-typing-area" class="bg-gray-100 rounded-md border-2 border-transparent focus-within:border-green-500" onclick="document.getElementById('pledge-input').focus()">
+                        <div id="pledge-text-display" class="typing-text-style"></div>
+                        <textarea id="pledge-input" rows="4" class="typing-text-style"></textarea>
+                    </div>
+                </div>
+                <button id="btn-signup" onclick="signup()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors" disabled>가입하기</button>
+            </div>
+            <p id="signup-error" class="text-red-500 text-center mt-4 h-5"></p>
+            <div class="text-center mt-6">
+                <a href="#" onclick="showLoginView()" class="text-sm text-blue-600 hover:underline">이미 계정이 있으신가요? 로그인</a>
+            </div>
+        </div>
+        <div id="main-view" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <span id="user-info" class="font-bold text-lg text-gray-700"></span>
+                    <span id="main-view-selector" class="ml-4">
+                        <button onclick="showChallengeView()" id="btn-challenge-view" class="text-blue-600 font-bold">순차 풀이</button> |
+                        <button onclick="showRetryView()" id="btn-retry-view" class="text-gray-500">포기한 문제</button> |
+                        <button onclick="showStatsView()" id="btn-stats-view" class="text-gray-500">통계 비교</button>
+                    </span>
+                </div>
+                <button onclick="logout()" class="text-sm text-gray-500 hover:text-gray-800">로그아웃</button>
+            </div>
+            <div id="challenge-content">
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <div id="problem-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h2 class="text-3xl font-bold text-gray-800" id="problem-title">다음 문제</h2>
+                                <p class="text-gray-500" id="problem-id-difficulty">#????</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-lg font-bold text-gray-800">현재 문제</p>
+                                <p class="text-3xl font-bold text-blue-600" id="problem-progress">?/?</p>
+                            </div>
+                        </div>
+                        <div id="hint-button-container" class="mt-6 text-center">
+                            <button id="btn-hint" onclick="toggleHint()" class="w-full sm:w-auto bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-300 transition-colors">
+                                💡 잘 모르겠어요 (힌트 보기)
+                            </button>
+                        </div>
+                        <div id="hint-box" class="hidden mt-6 border-t pt-6">
+                             <div class="mb-4">
+                                <p class="text-sm text-blue-500 font-semibold" id="problem-category">Category</p>
+                             </div>
+                             <div class="bg-gray-50 p-4 rounded-lg">
+                                <p class="font-semibold text-gray-700 mb-2">💡 힌트 (문제 설명)</p>
+                                <p id="problem-desc" class="text-gray-600 whitespace-pre-wrap">Description</p>
+                                <p class="font-semibold text-gray-700 mt-4 mb-2">🔍 추천 검색 키워드</p>
+                                <p id="problem-keywords" class="text-blue-600 font-medium">Keywords</p>
+                             </div>
+                        </div>
+                        <div id="action-buttons" class="mt-8 space-y-3 border-t pt-6">
+                            <button id="btn-start" onclick="startProblem()" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition-colors">문제 풀기 시작</button>
+                            <div id="in-progress-buttons" class="hidden grid grid-cols-2 gap-4">
+                               <button onclick="completeProblem()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors">✅ 풀었습니다!</button>
+                               <button onclick="giveUpProblem()" class="w-full bg-red-600 text-white font-bold py-3 rounded-lg hover:bg-red-700 transition-colors">🏳️ 포기했습니다</button>
+                            </div>
+                        </div>
+                        <div id="start-time-info" class="text-center mt-4 text-sm text-gray-500 h-5"></div>
+                    </div>
+                    <div id="all-complete-message" class="hidden text-center py-16">
+                        <h2 class="text-3xl font-bold text-green-600 mb-4">축하합니다!</h2>
+                        <p class="text-xl text-gray-700">모든 챌린지 문제를 해결하셨습니다!</p>
+                    </div>
+                </div>
+            </div>
+            <div id="retry-content" class="hidden">
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">포기한 문제 목록</h2>
+                    <div id="retry-list" class="space-y-3"></div>
+                    <div id="no-retry-message" class="hidden text-center py-12 text-gray-500">
+                        <p>포기한 문제가 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+            <div id="stats-content" class="hidden">
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">학습 통계 비교</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-blue-50 p-6 rounded-lg">
+                            <h3 class="text-xl font-bold text-blue-800 mb-4 text-center">나의 기록</h3>
+                            <div class="space-y-3 text-gray-700">
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">진행도:</strong> <span class="text-right"><span id="my-progress-text"></span> <span id="diff-progress" class="ml-2 font-bold"></span></span></div>
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">평균 시도 횟수:</strong> <span class="text-right"><span id="my-avg-attempts"></span> <span id="diff-avg-attempts" class="ml-2 font-bold"></span></span></div>
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">총 포기 횟수:</strong> <span class="text-right"><span id="my-total-giveups"></span> <span id="diff-total-giveups" class="ml-2 font-bold"></span></span></div>
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">최다 포기 횟수:</strong> <span class="text-right"><span id="my-max-giveups"></span> <span id="diff-max-giveups" class="ml-2 font-bold"></span></span></div>
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">평균 해결 시간:</strong> <span class="text-right"><span id="my-avg-solve-time"></span> <span id="diff-avg-solve-time" class="ml-2 font-bold"></span></span></div>
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">평균 포기 시간:</strong> <span class="text-right"><span id="my-avg-giveup-time"></span> <span id="diff-avg-giveup-time" class="ml-2 font-bold"></span></span></div>
+                            </div>
+                        </div>
+                        <div class="bg-green-50 p-6 rounded-lg">
+                            <div class="custom-select-wrapper mb-4">
+                                <select id="user-select" onchange="compareStats()" class="w-full cursor-pointer appearance-none bg-transparent text-center text-xl font-bold text-green-800 focus:outline-none">
+                                    <option value="all">전체 유저 평균</option>
+                                </select>
+                            </div>
+                             <div class="space-y-3 text-gray-700">
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">진행도:</strong> <span id="other-progress-text" class="text-right"></span></div>
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">평균 시도 횟수:</strong> <span id="other-avg-attempts" class="text-right"></span></div>
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">총 포기 횟수:</strong> <span id="other-total-giveups" class="text-right"></span></div>
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">최다 포기 횟수:</strong> <span id="other-max-giveups" class="text-right"></span></div>
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">평균 해결 시간:</strong> <span id="other-avg-solve-time" class="text-right"></span></div>
+                                <div class="flex justify-between items-baseline"><strong class="whitespace-nowrap mr-2">평균 포기 시간:</strong> <span id="other-avg-giveup-time" class="text-right"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="loading-view" class="hidden fixed inset-0 bg-white bg-opacity-75 flex justify-center items-center z-50">
+            <div class="loader"></div>
+        </div>
+    </div>
+    <footer class="text-center py-10 px-4">
+        <p class="text-sm text-gray-600">
+            문제 출처: <a href="https://www.acmicpc.net/" target="_blank" class="font-semibold underline hover:text-gray-800">Baekjoon Online Judge</a>
+        </p>
+        <p class="text-xs text-gray-400 mt-2">
+            Developed & Planned & Designed by <a href="https://99jik.com">JIK</a>, Leader of <a href="https://altruistic-hive.org">AH</a>
+        </p>
+    </footer>
+
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyY01JuWGhw1MpDX8Yj8YpfLf6nufVZ4vOrMJLC87b2dt9k3j_h2WlUjxJmrtzapMf4sQ/exec";
+        let currentUser = null;
+        let currentProblem = null;
+        let statsCache = null;
+        let typedPledgeText = '';
+
+        async function apiCall(action, params = {}) {
+            showLoading(true);
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST', mode: 'cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action, params })
+                });
+                if (!response.ok) throw new Error(`네트워크 응답이 올바르지 않습니다: ${response.statusText}`);
+                const result = await response.json();
+                if (result.status === 'error') throw new Error(result.error);
+                return result.data;
+            } catch (error) {
+                onFailure(error);
+                throw error;
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function showView(viewId) {
+            ['login-view', 'signup-view', 'main-view', 'loading-view'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+            const targetEl = document.getElementById(viewId);
+            if (targetEl) targetEl.classList.remove('hidden');
+        }
+
+        function showLoading(isLoading) {
+            const loadingView = document.getElementById('loading-view');
+            if (isLoading) loadingView.classList.remove('hidden');
+            else loadingView.classList.add('hidden');
+        }
+
+        function showSignUpView() {
+            showView('signup-view');
+            document.getElementById('signup-error').textContent = '';
+        }
+
+        function showLoginView() {
+            showView('login-view');
+            document.getElementById('login-error').textContent = '';
+        }
+
+        async function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const errorEl = document.getElementById('login-error');
+            errorEl.textContent = '';
+            if (!username || !password) {
+                errorEl.textContent = '아이디와 비밀번호를 모두 입력하세요.'; return;
+            }
+            try {
+                const user = await apiCall('authenticateUser', { userId: username, password: password });
+                onLoginSuccess(user);
+            } catch (error) {
+                 if (error.message.includes("incorrect")) {
+                    errorEl.textContent = '아이디 또는 비밀번호가 일치하지 않습니다.';
+                 }
+            }
+        }
+
+        function onLoginSuccess(user) {
+            if (user) {
+                currentUser = user;
+                document.getElementById('user-info').textContent = `${currentUser.NAME}님, 환영합니다.`;
+                showView('main-view');
+                showChallengeView(); 
+            } else {
+                document.getElementById('login-error').textContent = '아이디 또는 비밀번호가 일치하지 않습니다.';
+                showView('login-view');
+            }
+        }
+        
+        function getKoreanParticle(name) {
+            if (!name) return '은(는)';
+            const lastChar = name.charCodeAt(name.length - 1);
+            if (lastChar < 0xAC00 || lastChar > 0xD7A3) return '는';
+            return (lastChar - 0xAC00) % 28 > 0 ? '은' : '는';
+        }
+
+        function getPledgeText(name) {
+            const particle = getKoreanParticle(name);
+            return `나, ${name || '(이름)'}${particle} 문제 해결 과정에서 문제 자체 검색, AI 활용 등 부정 행위 없이 오직 스스로의 힘으로 문제를 해결하겠습니다. 이를 맹세합니다.`;
+        }
+        
+        function renderPledgeText() {
+            const name = document.getElementById('signup-name').value;
+            const targetText = getPledgeText(name);
+            const displayEl = document.getElementById('pledge-text-display');
+            displayEl.innerHTML = ''; 
+
+            targetText.split('').forEach(char => {
+                const span = document.createElement('span');
+                span.textContent = char;
+                displayEl.appendChild(span);
+            });
+            
+            document.getElementById('pledge-input').value = '';
+            checkPledgeTyping();
+        }
+
+        function checkPledgeTyping() {
+            const typedText = document.getElementById('pledge-input').value;
+            const displaySpans = document.querySelectorAll('#pledge-text-display span');
+            
+            displaySpans.forEach((span, i) => {
+                if (i < typedText.length) {
+                    span.className = (typedText[i] === span.textContent) ? 'correct' : 'incorrect';
+                } else {
+                    span.className = '';
+                }
+            });
+            checkSignupFormCompletion();
+        }
+        
+        function checkSignupFormCompletion() {
+            const name = document.getElementById('signup-name').value.trim();
+            const username = document.getElementById('signup-username').value.trim();
+            const password = document.getElementById('signup-password').value.trim();
+            const passwordConfirm = document.getElementById('signup-password-confirm').value.trim();
+            const pledgeSection = document.getElementById('pledge-section');
+            const signupButton = document.getElementById('btn-signup');
+
+            const allFieldsFilled = name && username && password && passwordConfirm;
+
+            if (allFieldsFilled) {
+                pledgeSection.classList.remove('hidden');
+                const targetText = getPledgeText(name);
+                const typedText = document.getElementById('pledge-input').value;
+                const isPledgeCorrect = (targetText === typedText);
+                signupButton.disabled = !isPledgeCorrect;
+            } else {
+                pledgeSection.classList.add('hidden');
+                signupButton.disabled = true;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const signupFields = ['signup-name', 'signup-username', 'signup-password', 'signup-password-confirm'];
+            signupFields.forEach(id => {
+                const element = document.getElementById(id);
+                if(element) {
+                    element.addEventListener('input', () => {
+                        if(id === 'signup-name') {
+                            renderPledgeText();
+                        }
+                        checkSignupFormCompletion();
+                    });
+                }
+            });
+            const pledgeInput = document.getElementById('pledge-input');
+            if (pledgeInput) {
+                pledgeInput.addEventListener('input', checkPledgeTyping);
+            }
+        });
+
+        async function signup() {
+            const userName = document.getElementById('signup-name').value;
+            const userId = document.getElementById('signup-username').value;
+            const password = document.getElementById('signup-password').value;
+            try {
+                const result = await apiCall('registerUser', { userId, password, userName });
+                if (result.success) {
+                    alert('회원가입이 완료되었습니다! 로그인 페이지로 이동합니다.');
+                    showLoginView();
+                }
+            } catch (error) {
+                document.getElementById('signup-error').textContent = error.message;
+            }
+        }
+        function logout() {
+            currentUser = null;
+            currentProblem = null;
+            statsCache = null; 
+            showLoginView();
+        }
+
+        function setActiveTab(activeTabId) {
+             const tabButtons = ['btn-challenge-view', 'btn-retry-view', 'btn-stats-view'];
+             tabButtons.forEach(id => {
+                const btn = document.getElementById(id);
+                if (id === activeTabId) {
+                    btn.classList.add('text-blue-600', 'font-bold');
+                    btn.classList.remove('text-gray-500');
+                } else {
+                    btn.classList.remove('text-blue-600', 'font-bold');
+                    btn.classList.add('text-gray-500');
+                }
+             });
+        }
+
+        function showChallengeView(fetchNext = true) {
+            document.getElementById('challenge-content').classList.remove('hidden');
+            document.getElementById('retry-content').classList.add('hidden');
+            document.getElementById('stats-content').classList.add('hidden');
+            setActiveTab('btn-challenge-view');
+            if (fetchNext) getNextProblem();
+        }
+
+        function showRetryView() {
+            document.getElementById('challenge-content').classList.add('hidden');
+            document.getElementById('retry-content').classList.remove('hidden');
+            document.getElementById('stats-content').classList.add('hidden');
+            setActiveTab('btn-retry-view');
+            getRetryProblems();
+        }
+
+        function showStatsView() {
+            document.getElementById('challenge-content').classList.add('hidden');
+            document.getElementById('retry-content').classList.add('hidden');
+            document.getElementById('stats-content').classList.remove('hidden');
+            setActiveTab('btn-stats-view');
+            getStats();
+        }
+        
+        function toggleHint() {
+            const hintBox = document.getElementById('hint-box');
+            const hintButton = document.getElementById('btn-hint');
+            hintBox.classList.toggle('hidden');
+
+            if (hintBox.classList.contains('hidden')) {
+                hintButton.innerHTML = '💡 잘 모르겠어요 (힌트 보기)';
+            } else {
+                hintButton.innerHTML = '🙈 힌트 숨기기';
+            }
+        }
+
+        async function getNextProblem() {
+            try {
+                const problemData = await apiCall('getNextProblem', { userId: currentUser.UID });
+                updateProblemView(problemData);
+            } catch(e) {}
+        }
+        
+        function updateProblemView(problemData) {
+            const problemCard = document.getElementById('problem-card');
+            const allCompleteMsg = document.getElementById('all-complete-message');
+
+            if (problemData) {
+                problemCard.classList.remove('hidden');
+                allCompleteMsg.classList.add('hidden');
+                currentProblem = problemData;
+
+                resetProblemView(); 
+                document.getElementById('problem-progress').textContent = `${currentProblem.Progress}`;
+                updateActionButtons(currentProblem.STATUS, currentProblem.STS);
+
+                if (currentProblem.STATUS === '진행중') {
+                    revealAllProblemInfo();
+                }
+
+            } else {
+                problemCard.classList.add('hidden');
+                allCompleteMsg.classList.remove('hidden');
+            }
+        }
+        
+        function resetProblemView() {
+            document.getElementById('problem-title').textContent = '다음 문제';
+            document.getElementById('problem-id-difficulty').textContent = `#????`;
+            const hintBox = document.getElementById('hint-box');
+            if(hintBox && !hintBox.classList.contains('hidden')) {
+                toggleHint();
+            }
+        }
+
+        function revealAllProblemInfo() {
+            if (!currentProblem) return;
+            document.getElementById('problem-title').textContent = currentProblem.TITLE;
+            document.getElementById('problem-id-difficulty').textContent = `#${currentProblem.PID} · ${currentProblem.LEVEL}`;
+            document.getElementById('problem-category').textContent = `${currentProblem.CID} > ${currentProblem.KEYWORD}`;
+            document.getElementById('problem-desc').textContent = currentProblem.DESC || "제공된 설명이 없습니다.";
+            document.getElementById('problem-keywords').textContent = currentProblem.KEYWORD || "제공된 키워드가 없습니다.";
+        }
+
+        async function getRetryProblems() {
+            try {
+                const problems = await apiCall('getGaveUpProblems', { userId: currentUser.UID });
+                updateRetryListView(problems);
+            } catch(e) {}
+        }
+
+        function updateRetryListView(problems) {
+            const retryList = document.getElementById('retry-list');
+            const noRetryMsg = document.getElementById('no-retry-message');
+            retryList.innerHTML = '';
+            if (problems && problems.length > 0) {
+                noRetryMsg.classList.add('hidden');
+                problems.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'flex justify-between items-center bg-gray-50 p-4 rounded-lg';
+                    div.innerHTML = `
+                        <div>
+                            <p class="font-semibold text-gray-800">${p.TITLE}</p>
+                            <p class="text-sm text-gray-500">#${p.PID} · ${p.GU_COUNT}번 포기</p>
+                        </div>
+                        <button onclick="startProblemFromRetry('${p.RID}')" class="bg-blue-500 text-white px-4 py-2 text-sm font-semibold rounded-lg hover:bg-blue-600">다시 풀기</button>
+                    `;
+                    retryList.appendChild(div);
+                });
+            } else {
+                noRetryMsg.classList.remove('hidden');
+            }
+        }
+        
+        function updateActionButtons(status, startTime) {
+            const btnStart = document.getElementById('btn-start');
+            const inProgressButtons = document.getElementById('in-progress-buttons');
+            const startTimeInfo = document.getElementById('start-time-info');
+            const tabButtons = [document.getElementById('btn-retry-view'), document.getElementById('btn-stats-view')];
+
+            if (status === '진행중') {
+                btnStart.classList.add('hidden');
+                inProgressButtons.classList.remove('hidden');
+                startTimeInfo.textContent = `풀이 시작: ${new Date(startTime).toLocaleString()}`;
+                tabButtons.forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('text-gray-300');
+                    btn.classList.remove('text-gray-500');
+                });
+            } else { 
+                btnStart.classList.remove('hidden');
+                inProgressButtons.classList.add('hidden');
+                startTimeInfo.textContent = '';
+                 tabButtons.forEach(btn => {
+                    btn.disabled = false;
+                    btn.classList.remove('text-gray-300');
+                    btn.classList.add('text-gray-500');
+                });
+            }
+        }
+        
+        async function startProblem() {
+             try {
+                const result = await apiCall('startProblem', { userId: currentUser.UID, problemId: currentProblem.PID, recordId: currentProblem.RID });
+                onProblemStarted(result);
+            } catch(e) {}
+        }
+        
+        async function startProblemFromRetry(recordId) {
+            try {
+                showChallengeView(false); 
+                const problemData = await apiCall('getProblemByRID', { recordId: recordId });
+                updateProblemView(problemData);
+                if(currentProblem) {
+                    startProblem();
+                }
+            } catch(e) {}
+        }
+
+        function onProblemStarted(result) {
+            if(result.success) {
+                currentProblem.RID = result.recordId;
+                currentProblem.STATUS = '진행중';
+                currentProblem.STS = result.startTime;
+
+                revealAllProblemInfo();
+                window.open(`https://boj.kr/${result.problemId}`, '_blank');
+                updateActionButtons('진행중', result.startTime);
+            }
+        }
+
+        async function completeProblem() {
+            try {
+                await apiCall('completeProblem', { recordId: currentProblem.RID });
+                onActionSuccess();
+            } catch(e) {}
+        }
+
+        async function giveUpProblem() {
+            try {
+                await apiCall('giveUpProblem', { recordId: currentProblem.RID });
+                onActionSuccess();
+            } catch(e) {}
+        }
+        
+        function onActionSuccess() {
+            statsCache = null; 
+            getNextProblem();
+        }
+        
+        async function getStats() {
+            try {
+                if (!statsCache) {
+                    statsCache = await apiCall('getUserStats', { userId: currentUser.UID });
+                }
+                updateStatsView(statsCache);
+            } catch(e) {}
+        }
+        
+        function updateStatsView(stats) {
+            const { myStats, allUserStatsList, allUsersAverageStats } = stats;
+
+            const myProgressPercent = (myStats.totalSolved / myStats.totalProblems * 100) || 0;
+            document.getElementById('my-progress-text').textContent = `${myStats.totalSolved} / ${myStats.totalProblems} (${myProgressPercent.toFixed(1)}%)`;
+            document.getElementById('my-avg-attempts').textContent = `${myStats.avgAttempts.toFixed(2)}회`;
+            document.getElementById('my-total-giveups').textContent = `${myStats.totalGiveUps.toFixed(0)}회`;
+            document.getElementById('my-max-giveups').textContent = `${myStats.maxGiveUps.toFixed(0)}회`;
+            document.getElementById('my-avg-solve-time').textContent = `${myStats.avgSolveTime.toFixed(1)}분`;
+            document.getElementById('my-avg-giveup-time').textContent = `${myStats.avgGiveUpTime.toFixed(1)}분`;
+
+            const userSelect = document.getElementById('user-select');
+            const selectedValue = userSelect.value;
+            userSelect.innerHTML = '<option value="all">전체 유저 평균</option>'; 
+            allUserStatsList.forEach(user => {
+                if (user.UID !== currentUser.UID) {
+                    const option = document.createElement('option');
+                    option.value = user.UID;
+                    option.textContent = user.NAME;
+                    userSelect.appendChild(option);
+                }
+            });
+            userSelect.value = selectedValue || 'all';
+
+            compareStats();
+        }
+
+        function compareStats() {
+            if (!statsCache) return;
+
+            const { myStats, allUserStatsList, allUsersAverageStats } = statsCache;
+            const userSelect = document.getElementById('user-select');
+            const selectedValue = userSelect.value;
+            let otherStats;
+
+            if (selectedValue === 'all') {
+                otherStats = allUsersAverageStats;
+            } else if (selectedValue) {
+                const selectedUser = allUserStatsList.find(u => u.UID === selectedValue);
+                otherStats = selectedUser ? selectedUser.stats : null;
+            }
+
+            if (!otherStats) {
+                const otherProgressPercent = (0 / myStats.totalProblems * 100) || 0;
+                document.getElementById('other-progress-text').textContent = `0 / ${myStats.totalProblems} (${otherProgressPercent.toFixed(1)}%)`;
+                document.getElementById('other-avg-attempts').textContent = '0 회';
+                document.getElementById('other-total-giveups').textContent = '0 회';
+                document.getElementById('other-max-giveups').textContent = '0 회';
+                document.getElementById('other-avg-solve-time').textContent = '0 분';
+                document.getElementById('other-avg-giveup-time').textContent = '0 분';
+                
+                ['progress', 'avg-attempts', 'total-giveups', 'max-giveups', 'avg-solve-time', 'avg-giveup-time'].forEach(id => {
+                    const diffEl = document.getElementById(`diff-${id}`);
+                    if (diffEl) diffEl.textContent = '';
+                });
+                return;
+            };
+            
+            const otherProgressPercent = (otherStats.totalSolved / otherStats.totalProblems * 100) || 0;
+            document.getElementById('other-progress-text').textContent = `${otherStats.totalSolved.toFixed(0)} / ${otherStats.totalProblems} (${otherProgressPercent.toFixed(1)}%)`;
+            document.getElementById('other-avg-attempts').textContent = `${otherStats.avgAttempts.toFixed(2)} 회`;
+            document.getElementById('other-total-giveups').textContent = `${otherStats.totalGiveUps.toFixed(0)} 회`;
+            document.getElementById('other-max-giveups').textContent = `${otherStats.maxGiveUps.toFixed(0)} 회`;
+            document.getElementById('other-avg-solve-time').textContent = `${otherStats.avgSolveTime.toFixed(1)} 분`;
+            document.getElementById('other-avg-giveup-time').textContent = `${otherStats.avgGiveUpTime.toFixed(1)} 분`;
+            
+            updateComparison(myStats.totalSolved, otherStats.totalSolved, 'diff-progress', true);
+            updateComparison(myStats.avgAttempts, otherStats.avgAttempts, 'diff-avg-attempts', false);
+            updateComparison(myStats.totalGiveUps, otherStats.totalGiveUps, 'diff-total-giveups', false);
+            updateComparison(myStats.maxGiveUps, otherStats.maxGiveUps, 'diff-max-giveups', false);
+            updateComparison(myStats.avgSolveTime, otherStats.avgSolveTime, 'diff-avg-solve-time', false);
+            updateComparison(myStats.avgGiveUpTime, otherStats.avgGiveUpTime, 'diff-avg-giveup-time', false);
+        }
+
+        function updateComparison(myValue, otherValue, elementId, higherIsBetter) {
+            const diff = myValue - otherValue;
+            const el = document.getElementById(elementId);
+            
+            el.textContent = '';
+            el.classList.remove('text-red-500', 'text-blue-500');
+
+            if (Math.abs(diff) < 0.01) return;
+
+            const isBetter = higherIsBetter ? diff > 0 : diff < 0;
+            
+            let diffText = diff.toFixed(1).replace('.0', '');
+            if(elementId === 'diff-avg-attempts') diffText = diff.toFixed(2);
+
+
+            if (isBetter) {
+                el.classList.add('text-red-500');
+                el.textContent = `(${diffText > 0 ? '+' : ''}${diffText})`;
+            } else {
+                el.classList.add('text-blue-500');
+                el.textContent = `(${diffText > 0 ? '+' : ''}${diffText})`;
+            }
+        }
+        
+        function onFailure(error) {
+            alert('오류가 발생했습니다: ' + error.message);
+            showLoading(false);
+        }
+    </script>
+</body>
+</html>
